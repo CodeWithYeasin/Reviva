@@ -125,7 +125,52 @@ else:
         return {"detail": "React build missing - open /gradio instead."}
 
 
+def _send_zerogpu_startup_report() -> bool:
+    """Tell the ZeroGPU runtime that this app has a @spaces.GPU function.
+
+    The `spaces` package normally sends that report from inside
+    gradio.Blocks.launch(). We serve the Gradio app through our own uvicorn
+    process, so launch() never runs and the runtime shuts the Space down with
+    "No @spaces.GPU function detected during startup". Sending the report
+    ourselves is the documented workaround; the exact symbol has moved
+    between releases, so try the known spellings and log what is available.
+    """
+    if not os.environ.get("SPACES_ZERO_GPU"):
+        return False
+
+    import importlib
+
+    candidates = (
+        ("spaces.zero", ("startup", "startup_report")),
+        ("spaces.zero.client", ("startup_report", "startup")),
+        ("spaces.zero.gradio", ("startup", "startup_report")),
+    )
+    for mod_name, fn_names in candidates:
+        try:
+            mod = importlib.import_module(mod_name)
+        except Exception:
+            continue
+        print(f"[reviva] {mod_name} exports: {sorted(n for n in dir(mod) if not n.startswith('__'))}")
+        for fn_name in fn_names:
+            fn = getattr(mod, fn_name, None)
+            if not callable(fn):
+                continue
+            for args in ((), (demo,)):
+                try:
+                    fn(*args)
+                    print(f"[reviva] ZeroGPU startup report sent via {mod_name}.{fn_name}{args and '(demo)' or '()'}")
+                    return True
+                except TypeError:
+                    continue
+                except Exception as exc:
+                    print(f"[reviva] {mod_name}.{fn_name} failed: {exc!r}")
+                    break
+    print("[reviva] could not send a ZeroGPU startup report")
+    return False
+
+
 if __name__ == "__main__":
+    _send_zerogpu_startup_report()
     uvicorn.run(
         app,
         host="0.0.0.0",
