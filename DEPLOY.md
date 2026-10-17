@@ -55,10 +55,12 @@ It sleeps when idle and wakes on the next request.
    git remote add origin https://huggingface.co/spaces/<your-hf-username>/reviva
    git add -A
    git commit -m "deploy Reviva"
-   git push -u origin main
+   git push -u origin main --force
    ```
 
-   Username = your HF name, password = the token from step 2.
+   Username = your HF name, password = the token from step 2. `--force` is
+   needed only on this first push: creating the Space already made a starter
+   commit on the remote, and this replaces it.
 
 5. Watch the **Logs** tab. The first build takes 5–10 minutes (PyTorch is
    large). When it says the app is running, open the Space URL.

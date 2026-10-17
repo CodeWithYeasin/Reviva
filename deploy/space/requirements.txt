@@ -1,9 +1,10 @@
-# Reviva on a free (CPU) Hugging Face Space.
-# The CPU torch wheels keep the build ~4x smaller than the default CUDA ones.
---extra-index-url https://download.pytorch.org/whl/cpu
+# Reviva on a free Hugging Face ZeroGPU Space.
+# ZeroGPU only accepts torch >= 2.8 and needs the regular (CUDA) wheels,
+# so do NOT switch these to the +cpu builds.
 
 # --- Web ---
 gradio==4.44.1
+spaces==0.30.4
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
@@ -14,9 +15,9 @@ numpy==1.26.4
 opencv-python-headless==4.10.0.84
 Pillow==10.4.0
 
-# --- Models (CPU builds) ---
-torch==2.3.1+cpu
-torchvision==0.18.1+cpu
+# --- Models ---
+torch==2.8.0
+torchvision==0.23.0
 basicsr==1.4.2
 realesrgan==0.3.0
 gfpgan==1.3.8

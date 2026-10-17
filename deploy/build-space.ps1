@@ -34,4 +34,6 @@ Write-Host '  git remote add origin https://huggingface.co/spaces/<your-hf-usern
 Write-Host 'Every time:'
 Write-Host '  git add -A'
 Write-Host '  git commit -m "deploy"'
-Write-Host '  git push -u origin main   # username = your HF name, password = an HF access token'
+Write-Host '  git push -u origin main --force   # --force only the FIRST time: the Space'
+Write-Host '                                    # was created with its own starter commit.'
+Write-Host '  # username = your HF name, password = an HF access token (write)'
