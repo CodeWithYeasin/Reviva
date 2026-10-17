@@ -5,6 +5,10 @@
 # NOTE: do not pin `spaces` or `gradio` here - the Space builder injects its
 # own versions and a pin of either causes a ResolutionImpossible error.
 
+# huggingface_hub 1.x dropped HfFolder, which gradio 4.x still imports, so the
+# Space crashes at startup unless the hub is held on the 0.x line.
+huggingface_hub==0.34.3
+
 # --- Web ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
