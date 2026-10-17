@@ -15,7 +15,7 @@
 </div>
 
 ---
-
+deployment:https://huggingface.co/spaces/codewithyeasin/reviva
 > **What it is:** a Remini‑style web app — upload a blurry or low‑resolution
 > photo (or a short video) and get a sharper, restored version back. It runs on
 > open‑source AI models. It is an **independent open‑source project** and is not
