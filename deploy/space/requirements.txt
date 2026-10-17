@@ -2,9 +2,10 @@
 # ZeroGPU only accepts torch >= 2.8 and needs the regular (CUDA) wheels,
 # so do NOT switch these to the +cpu builds.
 
+# NOTE: do not pin `spaces` or `gradio` here - the Space builder injects its
+# own versions and a pin of either causes a ResolutionImpossible error.
+
 # --- Web ---
-gradio==4.44.1
-spaces==0.30.4
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
