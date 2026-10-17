@@ -34,9 +34,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_FRONTEND = os.path.join(
+_FRONTEND = os.getenv("REVIVA_FRONTEND_DIR") or os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "frontend", "dist"
 )
+
+# Hosts that need to add their own routes before the catch-all "/" mount
+# (e.g. the Hugging Face Space entrypoint) set this to "1" and mount the UI
+# themselves. Everywhere else it stays off and behaviour is unchanged.
+_SKIP_FRONTEND_MOUNT = os.getenv("REVIVA_SKIP_FRONTEND_MOUNT") == "1"
 
 
 @app.get("/health")
@@ -107,7 +112,9 @@ async def enhance_video_endpoint(
 # Serve the built frontend last so API routes win.
 # `frontend/dist` only exists after `npm run build` — guard so the API still
 # boots (e.g. when running the Vite dev server separately on :5173).
-if os.path.isdir(_FRONTEND):
+if _SKIP_FRONTEND_MOUNT:
+    pass
+elif os.path.isdir(_FRONTEND):
     app.mount("/", StaticFiles(directory=_FRONTEND, html=True), name="frontend")
 else:
     @app.get("/")

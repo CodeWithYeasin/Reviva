@@ -1,0 +1,49 @@
+# Reviva — CPU-only image. Use this on any host without a GPU
+# (Google Cloud Run, Oracle Cloud, a plain VPS, local testing).
+#
+#   docker build -f Dockerfile.cpu -t reviva:cpu .
+#   docker run -p 8000:8000 reviva:cpu
+#
+# Honours $PORT, which is what Cloud Run and most PaaS hosts inject.
+
+# ---- Stage 1: build the React UI ----
+FROM node:20-slim AS web
+WORKDIR /web
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# ---- Stage 2: the app ----
+FROM python:3.10-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# CPU wheels: ~4x smaller than the default CUDA ones.
+RUN pip install torch==2.3.1 torchvision==0.18.1 \
+        --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements.txt .
+# torch is already installed above; the pins in requirements.txt match.
+RUN pip install -r requirements.txt
+
+COPY backend/ ./backend/
+COPY --from=web /web/dist ./frontend/dist
+
+# CPU-sane defaults.
+ENV REVIVA_USE_GPU=0 \
+    UPSCALE=2 \
+    MAX_VIDEO_SECONDS=3 \
+    REVIVA_WORK_DIR=/tmp/reviva \
+    REVIVA_WEIGHTS_DIR=/tmp/reviva-weights \
+    PORT=8000
+
+EXPOSE 8000
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

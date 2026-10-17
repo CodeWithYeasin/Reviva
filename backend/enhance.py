@@ -11,10 +11,25 @@ import os
 import cv2
 import numpy as np
 
-from . import config
+from . import compat, config
 
-_WEIGHTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "weights")
-os.makedirs(_WEIGHTS_DIR, exist_ok=True)
+# Must run before basicsr / realesrgan / gfpgan are imported anywhere.
+compat.patch_torchvision_functional_tensor()
+
+# Where downloaded model weights land. Override with REVIVA_WEIGHTS_DIR on
+# hosts where the app directory is read-only (most free PaaS containers).
+_WEIGHTS_DIR = os.getenv(
+    "REVIVA_WEIGHTS_DIR",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "weights"),
+)
+try:
+    os.makedirs(_WEIGHTS_DIR, exist_ok=True)
+except OSError:
+    # Read-only filesystem: fall back to a temp dir so import still succeeds.
+    import tempfile
+
+    _WEIGHTS_DIR = os.path.join(tempfile.gettempdir(), "reviva-weights")
+    os.makedirs(_WEIGHTS_DIR, exist_ok=True)
 
 _upsampler = None
 _face_enhancer = None
