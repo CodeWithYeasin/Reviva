@@ -4,18 +4,23 @@ Reviva entrypoint for Hugging Face Spaces (free ZeroGPU tier).
 Why this file exists
 --------------------
 Docker Spaces need a paid plan and free accounts cannot downgrade a Space to
-cpu-basic, so the free route is a Gradio-SDK Space on ZeroGPU. ZeroGPU gives
-real GPU time (free, with a daily quota) but only inside functions decorated
-with @spaces.GPU — so every enhancement in this app goes through one such
-function, whether it was triggered from the React UI, the REST API or Gradio.
+cpu-basic, so the free route is a Gradio-SDK Space on ZeroGPU.
+
+ZeroGPU rules that shape this file:
+  * a GPU only exists inside a function decorated with @spaces.GPU;
+  * that decorated function must be the one registered as a Gradio event
+    handler, otherwise startup fails with "No @spaces.GPU function detected".
+
+So `enhance_photo` below is both the Gradio handler and the single place any
+enhancement happens - the REST endpoint is routed through it too.
 
     /           the built React UI            (web/)
     /api/...    the FastAPI endpoints         (backend/main.py)
-    /gradio     a minimal Gradio UI           (also a free auto-generated API)
+    /gradio     the Gradio UI                 (also a free auto-generated API)
     /health     liveness probe
 
 Mount order matters: the React UI is a catch-all mount at "/", so it has to go
-on last — hence REVIVA_SKIP_FRONTEND_MOUNT below.
+on last - hence REVIVA_SKIP_FRONTEND_MOUNT below.
 """
 import os
 import sys
@@ -49,11 +54,36 @@ _WEB = os.getenv("REVIVA_FRONTEND_DIR") or os.path.join(_HERE, "web")
 
 
 @spaces.GPU(duration=120)
-def enhance_on_gpu(data: bytes, restore_faces: bool = True) -> bytes:
-    """The one place a GPU exists. Models load lazily on first call, here."""
+def enhance_photo(image_path: str, restore_faces: bool = True) -> str:
+    """The Gradio handler AND the only place a GPU exists.
+
+    Models load lazily on the first call, which happens inside the GPU
+    context, so they land on CUDA.
+    """
+    if not image_path:
+        raise gr.Error("Upload a photo first.")
+
     from backend.enhance import enhance_image_bytes
 
-    return enhance_image_bytes(data, restore_faces=restore_faces)
+    with open(image_path, "rb") as fh:
+        data = fh.read()
+    result = enhance_image_bytes(data, restore_faces=restore_faces)
+
+    out_path = os.path.join(tempfile.mkdtemp(prefix="reviva_out_"), "reviva.png")
+    with open(out_path, "wb") as fh:
+        fh.write(result)
+    return out_path
+
+
+def _api_enhance_bytes(data: bytes, restore_faces: bool = True) -> bytes:
+    """Bytes-in/bytes-out shim so /api/enhance/photo uses the same GPU call."""
+    work = tempfile.mkdtemp(prefix="reviva_api_")
+    src = os.path.join(work, "input")
+    with open(src, "wb") as fh:
+        fh.write(data)
+    out_path = enhance_photo(src, restore_faces)
+    with open(out_path, "rb") as fh:
+        return fh.read()
 
 
 def _video_unavailable(*_args, **_kwargs):
@@ -64,21 +94,8 @@ def _video_unavailable(*_args, **_kwargs):
     )
 
 
-# Route the REST endpoint through the GPU function, and turn video off.
-backend_main.enhance_image_bytes = enhance_on_gpu
+backend_main.enhance_image_bytes = _api_enhance_bytes
 backend_video.enhance_video = _video_unavailable
-
-
-def _gradio_enhance(image_path: str, restore_faces: bool) -> str:
-    if not image_path:
-        raise gr.Error("Upload a photo first.")
-    with open(image_path, "rb") as fh:
-        data = fh.read()
-    result = enhance_on_gpu(data, restore_faces)
-    out_path = os.path.join(tempfile.mkdtemp(prefix="reviva_gr_"), "reviva.png")
-    with open(out_path, "wb") as fh:
-        fh.write(result)
-    return out_path
 
 
 with gr.Blocks(title="Reviva", analytics_enabled=False) as demo:
@@ -94,7 +111,7 @@ with gr.Blocks(title="Reviva", analytics_enabled=False) as demo:
         dst = gr.Image(label="Enhanced", format="png")
     faces = gr.Checkbox(value=True, label="Restore faces (GFPGAN)")
     gr.Button("Enhance", variant="primary").click(
-        _gradio_enhance, inputs=[src, faces], outputs=dst
+        enhance_photo, inputs=[src, faces], outputs=dst
     )
 
 app = gr.mount_gradio_app(api, demo, path="/gradio")
