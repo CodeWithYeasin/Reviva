@@ -17,6 +17,10 @@ from starlette.responses import Response
 
 from . import config
 
+# "DENY" (default), "SAMEORIGIN", or "OFF" to send no frame header at all.
+_FRAME_OPTIONS = os.getenv("REVIVA_FRAME_OPTIONS", "DENY").upper()
+_CORP = os.getenv("REVIVA_CORP", "same-site")
+
 
 # ---- Magic-byte signatures: don't trust the Content-Type header alone ----
 _IMAGE_SIGNATURES = {
@@ -98,9 +102,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        # DENY everywhere by default. Hosts that legitimately embed the app in
+        # an iframe (a Hugging Face Space page, for example) set
+        # REVIVA_FRAME_OPTIONS=OFF, otherwise the embed shows "refused to
+        # connect".
+        if _FRAME_OPTIONS != "OFF":
+            response.headers["X-Frame-Options"] = _FRAME_OPTIONS
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cross-Origin-Resource-Policy"] = "same-site"
+        response.headers["Cross-Origin-Resource-Policy"] = _CORP
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         # Tell proxies/CDNs never to cache a user's image/video result.
         response.headers["Cache-Control"] = "no-store, max-age=0"

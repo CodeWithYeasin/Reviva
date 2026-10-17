@@ -38,6 +38,10 @@ os.environ.setdefault("REVIVA_WEIGHTS_DIR", os.path.join(_HERE, "weights"))
 os.environ.setdefault("REVIVA_USE_GPU", "auto")
 os.environ.setdefault("UPSCALE", "2")
 os.environ.setdefault("RATE_LIMIT_PHOTO", "6/minute")
+# The Space page embeds the app in an iframe, so the default X-Frame-Options:
+# DENY would show "refused to connect"; assets must be cross-origin too.
+os.environ.setdefault("REVIVA_FRAME_OPTIONS", "OFF")
+os.environ.setdefault("REVIVA_CORP", "cross-origin")
 # We mount the React build ourselves, after Gradio.
 os.environ["REVIVA_SKIP_FRONTEND_MOUNT"] = "1"
 
