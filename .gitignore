@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Model weights (downloaded at runtime — never commit, they are large)
+weights/
+*.pth
+*.onnx
+
+# Temp processing dirs (should never persist, but ignore just in case)
+tmp/
+temp/
+uploads/
+outputs/
+*.tmp
+
+# Frontend (React/Vite)
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Env
+.env
+*.log
