@@ -11,11 +11,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-6ea8fe?style=flat-square)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10+-9b7dff?style=flat-square)
 ![Privacy](https://img.shields.io/badge/privacy-no--retention-3fd98b?style=flat-square)
-
+[![HF Space](https://img.shields.io/badge/demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/codewithyeasin/reviva)
 </div>
 
 ---
-[![HF Space](https://img.shields.io/badge/demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/codewithyeasin/reviva)
+
 
 > **What it is:** a Remini‑style web app — upload a blurry or low‑resolution
 > photo (or a short video) and get a sharper, restored version back. It runs on
